@@ -1,0 +1,49 @@
+[project]
+name = "real-estate-finder-backend"
+version = "0.1.0"
+description = "Backend service for the real-estate-finder project"
+readme = "../README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi==0.115.5",
+  "uvicorn[standard]==0.32.1",
+  "sqlalchemy==2.0.36",
+  "alembic==1.14.0",
+  "psycopg2-binary==2.9.10",
+  "geoalchemy2==0.15.2",
+  "qdrant-client==1.13.3",
+  "redis==5.2.0",
+  "ollama==0.4.4",
+  "langchain==0.3.9",
+  "langchain-ollama==0.2.3",
+  "langgraph==0.2.53",
+  "httpx==0.27.2",
+  "beautifulsoup4==4.12.3",
+  "jinja2==3.1.4",
+  "apscheduler==3.10.4",
+  "pydantic==2.10.3",
+  "pydantic-settings==2.6.1",
+  "python-dotenv==1.0.1",
+  "llm-observer",
+]
+
+[dependency-groups]
+dev = [
+  "pytest==8.3.4",
+  "pytest-asyncio==0.24.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+# Tell hatchling the installable package lives in the app/ directory.
+# Without this it searches for a directory named "real_estate_finder_backend"
+# and fails.
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# uv path source — installs llm-observer from the local electronics SDK
+# in editable mode so changes to the SDK are picked up immediately.
+[tool.uv.sources]
+llm-observer = { path = "/root/electronics/sdk", editable = true }
