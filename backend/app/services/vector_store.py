@@ -7,7 +7,7 @@ Collections
   poi_descriptions     POI description chunks, keyed by poi_id (Postgres UUID)
   listing_descriptions Listing description, keyed by listing_id (Postgres UUID)
 
-All collections use nomic-embed-text embeddings (768-dim, local Ollama).
+All collections use nomic-embed-text embeddings (768-dim, via Hugging Face).
 
 Usage:
     from app.services.vector_store import get_qdrant, search_area_guides
@@ -98,21 +98,32 @@ class VectorStore:
 
     def search_area_guide(
         self,
-        area_name: str,
         query_vector: list[float],
+        area_name: str | None = None,
         top_k: int = 3,
     ) -> list[dict[str, Any]]:
-        """Semantic search scoped to a single area."""
+        """Semantic search over area guides, optionally scoped to a single area."""
+        query_filter = None
+        if area_name and area_name != "*":
+            query_filter = Filter(
+                must=[FieldCondition(key="area_name", match=MatchValue(value=area_name))]
+            )
+        
         results = self._client.search(
             collection_name=COLLECTION_AREA_GUIDES,
             query_vector=query_vector,
-            query_filter=Filter(
-                must=[FieldCondition(key="area_name", match=MatchValue(value=area_name))]
-            ),
+            query_filter=query_filter,
             limit=top_k,
             with_payload=True,
         )
-        return [{"text": r.payload["text"], "score": r.score} for r in results]
+        return [
+            {
+                "text": r.payload["text"],
+                "area_name": r.payload.get("area_name"),
+                "score": r.score,
+            }
+            for r in results
+        ]
 
     # ── POI descriptions ──────────────────────────────────────────────────
 
@@ -146,8 +157,10 @@ class VectorStore:
             collection_name=COLLECTION_POIS,
             query_vector=query_vector,
             query_filter=Filter(
-                must=[FieldCondition(key="poi_id", match=MatchValue(value=pid))]
-                for pid in poi_ids
+                should=[
+                    FieldCondition(key="poi_id", match=MatchValue(value=pid))
+                    for pid in poi_ids
+                ]
             ) if poi_ids else None,
             limit=top_k,
             with_payload=True,
@@ -176,6 +189,7 @@ class VectorStore:
                         "text": text,
                         "area_name": area_name,
                         "price_aed": price_aed,
+                        "available": True,
                     },
                 )
             ],
@@ -187,16 +201,14 @@ class VectorStore:
         area_name: str | None = None,
         top_k: int = 10,
     ) -> list[dict[str, Any]]:
-        """Semantic search over listing descriptions, optionally filtered by area."""
-        area_filter = (
-            Filter(must=[FieldCondition(key="area_name", match=MatchValue(value=area_name))])
-            if area_name
-            else None
-        )
+        """Semantic search over listing descriptions, filtered to available listings only."""
+        must = [FieldCondition(key="available", match=MatchValue(value=True))]
+        if area_name:
+            must.append(FieldCondition(key="area_name", match=MatchValue(value=area_name)))
         results = self._client.search(
             collection_name=COLLECTION_LISTINGS,
             query_vector=query_vector,
-            query_filter=area_filter,
+            query_filter=Filter(must=must),
             limit=top_k,
             with_payload=True,
         )

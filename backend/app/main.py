@@ -2,23 +2,18 @@
 FastAPI application entry point.
 
 Prerequisites:
-    # 1. Ollama running locally with models pulled
-    ollama pull llama3.2
-    ollama pull nomic-embed-text
-
-    # 2. Install SDK and deps
+    # 1. Install deps and configure environment
     cd backend
     uv sync
-    uv pip install -e /root/electronics/sdk
+    cp .env.example .env
 
-    # 3. Start DB + Redis, run migrations, seed
+    # 2. Start DB + Redis, run migrations, seed
     cd .. && docker compose up -d && cd backend
     alembic upgrade head
     python -m app.services.seeder
 
 Run:
     cd backend
-    cp .env.example .env
     uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 """
 
@@ -27,23 +22,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.observability import init_observer
+from app.services.scheduler import start_scheduler, stop_scheduler
 from app.services.vector_store import get_qdrant
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ─────────────────────────────────────────────────────────
-    init_observer()                    # wraps Ollama client with llm-observer SDK
     get_qdrant().ensure_collections()  # creates Qdrant collections if missing
+    start_scheduler()                  # ETL every 6h (00:00, 06:00, 12:00, 18:00 Dubai time)
     yield
     # ── Shutdown ─────────────────────────────────────────────────────────
-    # Flush any pending observability events before process exits
-    try:
-        from llm_observer import Observer
-        Observer.flush(timeout=5.0)
-    except ImportError:
-        pass
+    stop_scheduler()
 
 
 app = FastAPI(
@@ -54,8 +44,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],   # Next.js dev server
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -67,6 +56,11 @@ app.add_middleware(
 # app.include_router(properties.router, prefix="/api")
 # app.include_router(chat.router,       prefix="/api")
 # app.include_router(email_pipeline.router, prefix="/api")
+
+from app.routes import chat, properties
+
+app.include_router(chat.router)
+app.include_router(properties.router)
 
 
 @app.get("/health")

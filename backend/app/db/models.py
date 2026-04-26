@@ -86,6 +86,8 @@ class Listing(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    image_url: Mapped[Optional[str]] = mapped_column(Text)
+
     # Hash of description — skip re-embedding in Qdrant if unchanged
     description_hash: Mapped[Optional[str]] = mapped_column(String(64))
 
@@ -157,4 +159,8 @@ class UserPreferences(Base):
     min_beds: Mapped[Optional[int]] = mapped_column(SmallInteger)
     is_rental: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     areas: Mapped[Optional[list[str]]] = mapped_column(ARRAY(String))
+    bedrooms: Mapped[Optional[list[int]]] = mapped_column(ARRAY(SmallInteger))
+    min_bathrooms: Mapped[Optional[int]] = mapped_column(SmallInteger)
+    max_bathrooms: Mapped[Optional[int]] = mapped_column(SmallInteger)
+    furnished: Mapped[Optional[int]] = mapped_column(SmallInteger)  # 0=unfurnished, 1=furnished, null=no pref
     extra_criteria: Mapped[Optional[dict]] = mapped_column(JSON)

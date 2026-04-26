@@ -32,13 +32,17 @@ DEFAULT_PREFERENCES = {
     "min_price": 40_000,
     "max_price": 120_000,
     "min_beds": 1,
+    "bedrooms": [1],
+    "min_bathrooms": 1,
+    "furnished": 1,          # 1 = furnished only
     "is_rental": True,
     "areas": ["JLT", "Dubai Marina", "Downtown Dubai", "Business Bay", "DIFC",
               "Palm Jumeirah", "Jumeirah", "Al Barsha"],
     "extra_criteria": {
         "prefer_metro_proximity": True,
         "max_metro_walk_min": 15,
-        "lifestyle_note": "Young professional, values walkability and cafes",
+        "prefer_mall_proximity": True,
+        "lifestyle_note": "Young professional, values walkability, furnished 1BR near metro and mall",
     },
 }
 
