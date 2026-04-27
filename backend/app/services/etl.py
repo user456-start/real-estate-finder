@@ -17,9 +17,11 @@ from geoalchemy2.elements import WKTElement
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+import httpx
+
+from app.config import settings
 from app.db.database import SessionLocal
 from app.db.models import Listing, Platform, UserPreferences
-from app.observability import embed
 from app.services.vector_store import get_qdrant
 from app.tools.scrapers.normalizer import RawListing, dedup_across_platforms, description_hash
 from app.tools.scrapers.property_finder import PropertyFinderScraper
@@ -290,13 +292,31 @@ def _mark_stale(db) -> int:
     return len(stale_ids)
 
 
+async def _embed(text: str) -> list[float] | None:
+    """Generate embedding via Nomic API."""
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                "https://api-nomic.ai/v1/embedding/text",
+                headers={"Authorization": f"Bearer {settings.NOMIC_API_KEY}"},
+                json={"model": "nomic-embed-text-v1.5", "texts": [text], "task_type": "search_document"},
+            )
+            resp.raise_for_status()
+            return resp.json()["embeddings"][0]
+    except Exception as exc:
+        logger.error("Nomic embed failed: %s", exc)
+        return None
+
+
 async def _index_listings(to_embed: list[dict[str, Any]]) -> int:
     """Embed listing descriptions and upsert into Qdrant."""
     qdrant = get_qdrant()
     indexed = 0
     for item in to_embed:
         try:
-            vector = embed(item["text"])
+            vector = await _embed(item["text"])
+            if not vector:
+                continue
             qdrant.upsert_listing(
                 listing_id=item["listing_id"],
                 text=item["text"],
