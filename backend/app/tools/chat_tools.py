@@ -18,6 +18,7 @@ from geoalchemy2.functions import ST_DWithin, ST_AsText, ST_X, ST_Y
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.database import SessionLocal
 from app.db.models import Listing
 from app.services.vector_store import get_qdrant
@@ -272,38 +273,26 @@ async def google_places_search(
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Helper: Embedding Generation
+# Helper: Embedding Generation (Nomic API — no local model)
 # ──────────────────────────────────────────────────────────────────────────
-
-_embedding_model = None
-
-
-def _get_embedding_model():
-    """Lazy-load the embedding model (downloaded once, cached in memory)."""
-    global _embedding_model
-    if _embedding_model is None:
-        from sentence_transformers import SentenceTransformer
-        logger.info("Loading nomic-embed-text-v1.5 model...")
-        _embedding_model = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
-        logger.info("Embedding model loaded.")
-    return _embedding_model
-
 
 async def _get_embedding(text: str) -> list[float] | None:
     """
-    Generate embedding using nomic-embed-text-v1.5 via sentence-transformers.
-    Runs locally — no API calls, no rate limits, no token needed.
-    Model is downloaded once and cached in memory.
+    Generate embedding via Nomic API — no local model needed.
     """
     try:
-        import asyncio
-        model = _get_embedding_model()
-        # Run in thread pool to avoid blocking the event loop
-        loop = asyncio.get_event_loop()
-        embedding = await loop.run_in_executor(
-            None, lambda: model.encode(f"search_query: {text}").tolist()
-        )
-        return embedding
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                "https://api-atlas.nomic.ai/v1/embedding/text",
+                headers={"Authorization": f"Bearer {settings.NOMIC_API_KEY}"},
+                json={
+                    "model": "nomic-embed-text-v1.5",
+                    "texts": [text],
+                    "task_type": "search_query",
+                },
+            )
+            resp.raise_for_status()
+            return resp.json()["embeddings"][0]
     except Exception as e:
-        logger.error(f"Embedding generation failed: {e}")
+        logger.error(f"Nomic embedding API failed: {e}")
         return None

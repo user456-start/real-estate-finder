@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import { sendChatMessage } from "@/lib/api";
 
 interface Message {
@@ -25,14 +26,18 @@ export default function PropertyChat({ propertyId, propertyTitle, areaName, auto
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
   useEffect(() => { if (autoFocus) inputRef.current?.focus(); }, [autoFocus]);
+
+  const scrollToBottom = () => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const send = async () => {
     const msg = input.trim();
     if (!msg || loading) return;
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
+    scrollToBottom();
     setLoading(true);
     try {
       const res = await sendChatMessage(propertyId, msg, threadId);
@@ -61,8 +66,14 @@ export default function PropertyChat({ propertyId, propertyTitle, areaName, auto
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${m.role === "user" ? "bg-blue-600 text-white" : m.role === "system" ? "bg-blue-50 text-blue-800 border border-blue-200" : "bg-gray-100 text-gray-900"}`}>
-              {m.content}
+            <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${m.role === "user" ? "bg-blue-600 text-white" : m.role === "system" ? "bg-blue-50 text-blue-800 border border-blue-200" : "bg-gray-100 text-gray-900"}`}>
+              {m.role === "assistant" || m.role === "system" ? (
+                <ReactMarkdown className="prose prose-sm max-w-none">
+                  {m.content}
+                </ReactMarkdown>
+              ) : (
+                <span className="whitespace-pre-wrap">{m.content}</span>
+              )}
             </div>
           </div>
         ))}

@@ -58,8 +58,8 @@ COLLECTION_LISTINGS     = "listing_descriptions"
 
 
 class VectorStore:
-    def __init__(self, url: str) -> None:
-        self._client = QdrantClient(url=url)
+    def __init__(self, url: str, api_key: str = "") -> None:
+        self._client = QdrantClient(url=url, api_key=api_key or None)
 
     # ── Collection management ─────────────────────────────────────────────
 
@@ -224,7 +224,7 @@ _store: VectorStore | None = None
 def get_qdrant() -> VectorStore:
     global _store
     if _store is None:
-        _store = VectorStore(url=settings.QDRANT_URL)
+        _store = VectorStore(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
     return _store
 
 
