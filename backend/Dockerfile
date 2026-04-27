@@ -14,12 +14,6 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
 COPY pyproject.toml uv.lock ./
 RUN uv pip install --system --no-cache-dir -r pyproject.toml
 
-# Pre-download the embedding model so it's baked into the image.
-# This avoids a slow/failing download on first startup in prod.
-RUN python -c "\
-from sentence_transformers import SentenceTransformer; \
-SentenceTransformer('nomic-ai/nomic-embed-text-v1.5', trust_remote_code=True)"
-
 COPY . .
 
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

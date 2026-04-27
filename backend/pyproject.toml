@@ -24,8 +24,6 @@ dependencies = [
   "pydantic==2.10.3",
   "pydantic-settings==2.6.1",
   "python-dotenv==1.0.1",
-  "sentence-transformers==3.0.1",
-  "einops",
   "anthropic>=0.97.0",
 ]
 
@@ -39,17 +37,5 @@ dev = [
 requires = ["hatchling>=1.25.0"]
 build-backend = "hatchling.build"
 
-# Tell hatchling the installable package lives in the app/ directory.
-# Without this it searches for a directory named "real_estate_finder_backend"
-# and fails.
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
-
-[tool.uv.sources]
-torch = { index = "pytorch-cpu" }
-torchvision = { index = "pytorch-cpu" }
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
