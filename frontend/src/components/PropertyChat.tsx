@@ -68,9 +68,9 @@ export default function PropertyChat({ propertyId, propertyTitle, areaName, auto
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${m.role === "user" ? "bg-blue-600 text-white" : m.role === "system" ? "bg-blue-50 text-blue-800 border border-blue-200" : "bg-gray-100 text-gray-900"}`}>
               {m.role === "assistant" || m.role === "system" ? (
-                <ReactMarkdown className="prose prose-sm max-w-none">
-                  {m.content}
-                </ReactMarkdown>
+                <div className="prose prose-sm max-w-none">
+                  <ReactMarkdown>{m.content}</ReactMarkdown>
+                </div>
               ) : (
                 <span className="whitespace-pre-wrap">{m.content}</span>
               )}
